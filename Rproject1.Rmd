@@ -1,0 +1,98 @@
+---
+title: "Practicle machine learining - Assignment project 1"
+author: "sravan k"
+date: "Sunday 27 July 2014"
+output: html_document
+---
+Loading required libraries (Results Hidden, Warnings OFF, Messages OFF), and setting seed for reproducibility.
+
+```{r libraries, results='hide',warning=FALSE,message=FALSE}
+
+library(randomForest)
+set.seed(1234)
+```
+
+Clearing existing objects, Reading (& caching) Files, and making training and validation data sets.
+
+```{r reading_files, cache=TRUE}
+rm(list=ls())
+trainingCSV = read.csv("pml-training.csv")
+inTrain = sample(1:nrow(trainingCSV), size=0.2*nrow(trainingCSV))
+training <- trainingCSV[inTrain, ]
+validation <- trainingCSV[-inTrain, ]
+
+```
+
+Creating summary and viewing the top few records, and seeing paired scatter plots in the training file (Results Hidden, Output Cached).
+
+
+```{r data_summary, results="hide", cache=TRUE}
+summary(training)
+head(training)
+```
+
+Trying to explore the data, esp the relations between variables. 
+
+<p></p>
+
+<p> Since the number of features are huge, so most of the comprehensive plot based visualizations will break. Refer to the below error- Error: figure margins too large</p>
+
+<p></p>
+
+<p>There we may try to see multiple subsetted plot (as some examples given), or better still, see the tabular correlation matrix of the ones which are highly correlated.</p>
+
+```{r pair_plots, cache=TRUE,fig.width=7, fig.height=6, cache=TRUE}
+
+pairs(training[1:10000,1:10])
+```
+
+Since most of the columns have no data, or predictive power, it might not be conducive to use them as-is. Therefore filtering out fields with a lot of (more than 60%) null values.
+
+```{r preProcess, cache=TRUE}
+goodVar<-c((colSums(is.na(training[,-160])) >= 0.4*nrow(training)),160)
+training<-training[,goodVar]
+dim(training)
+validation<-validation[,goodVar]
+dim(validation)
+
+
+training<-training[complete.cases(training),]
+dim(training)
+```
+
+Training the model (RandomForest) on the training data set.
+
+```{r modeling, cache=TRUE}
+model <- randomForest(classe~.,data=training)
+print(model)
+head(importance(model))
+```
+
+Evaluating the model on the evaluation dataset.
+
+```{r validation, fig.width=7, fig.height=6, cache=TRUE}
+plot(predict(model,newdata=validation[,-ncol(validation)]),validation$classe)
+
+accurate<-c(as.numeric(predict(model,newdata=validation[,-ncol(validation)])==validation$classe))
+accuracy<-sum(accurate)*100/nrow(validation)
+message("Expected out of sample error using cross-validation is = " , format(round(100-accuracy, 2), nsmall = 2), "%")
+```
+
+Predicting the new values in the testing csv provided.
+
+```{r testPrediction, cache=TRUE}
+testing =  read.csv("pml-testing.csv")
+dim(testing)
+testing<-testing[,goodVar]
+dim(testing)
+predictions<-predict(model,newdata=testing)
+predictions
+```
+
+I faced some issues with Caret package in Ubuntu 12.04. so i didnot used confusion matrix functionality.
+
+thanks
+
+sravan k.
+
+<p></p>
